@@ -13,7 +13,8 @@ const orderSchema = new mongoose.Schema({
   status: { type: String, enum: ['pending', 'confirmed', 'preparing', 'delivered', 'cancelled'], default: 'pending'},
   paymentMethod: { type: String, enum: ['cash', 'online'], required: true},
   address: { type: String, required: true },
-  phone: { type: String, required: true}
+  phone: { type: String, required: true},
+  orderType: { type: String, enum: ['delivery', 'pickup'], required: true }
 
 }, { timestamps: true });
 

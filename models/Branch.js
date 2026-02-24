@@ -7,7 +7,7 @@ const branchSchema = new mongoose.Schema({
   phone: { type: String, required: true },
   managerName: { type: String },
   isActive: { type: Boolean, default: true }
-
+ 
 }, { timestamps: true });
 
 module.exports = mongoose.model('Branch', branchSchema);

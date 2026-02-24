@@ -19,4 +19,3 @@ const attendanceSchema = new mongoose.Schema({
 
 module.exports = mongoose.model('Attendance', attendanceSchema);
 attendanceSchema.index({ staff: 1, date: 1 }, { unique: true });
-//This prevents duplicate attendance records for same staff on same day. This is a **professional level** addition — add it!

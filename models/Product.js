@@ -17,10 +17,10 @@ const productSchema = new mongoose.Schema({
     required: true
 },
   branch: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Branch',
-    required: true
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Branch' }],
+    validate: v => v.length > 0  // minnimum 1 branch for each product
 }
+
 
 }, { timestamps: true });
 
