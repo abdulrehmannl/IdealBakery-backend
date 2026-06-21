@@ -59,7 +59,7 @@ const protect = async (req, res, next) => {
         // decoded = { id: '...', role: 'admin', iat: ..., exp: ... }
 
         // ── Step 3: Fetch the user from MongoDB ──
-        const user = await User.findById(decoded.id).select('-password');
+        const user = await User.findById(decoded.id).select('-password').populate('branch', 'name');
 
         if (!user) {
             return res.status(401).json({
@@ -93,6 +93,38 @@ const protect = async (req, res, next) => {
             });
         }
         next(error);
+    }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MIDDLEWARE 1b: optionalAuth
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * optionalAuth — Parses token if present, but does NOT throw 401 if missing.
+ * Sets req.user if valid token, or req.user = null if no token.
+ */
+const optionalAuth = async (req, res, next) => {
+    let token;
+    try {
+        if (req.cookies && req.cookies.token) {
+            token = req.cookies.token;
+        } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+            token = req.headers.authorization.split(' ')[1];
+        }
+
+        if (!token) {
+            req.user = null;
+            return next();
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await User.findById(decoded.id).select('-password').populate('branch', 'name');
+        
+        req.user = user && user.isActive ? user : null;
+        next();
+    } catch (error) {
+        req.user = null;
+        next();
     }
 };
 
@@ -151,7 +183,7 @@ const staffOrAdmin = (req, res, next) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // EXPORTS
 // ─────────────────────────────────────────────────────────────────────────────
-module.exports = { protect, adminOnly, staffOrAdmin };
+module.exports = { protect, optionalAuth, adminOnly, staffOrAdmin };
 
 /*
  * END OF FILE SUMMARY

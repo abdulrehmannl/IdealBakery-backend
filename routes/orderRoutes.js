@@ -15,13 +15,13 @@
 
 const express = require('express');
 const router  = express.Router();
-const { protect, adminOnly, staffOrAdmin } = require('../middleware/auth');
+const { protect, optionalAuth, adminOnly, staffOrAdmin } = require('../middleware/auth');
 const {
     createOrder, getAllOrders, getSingleOrder,
     updateOrderStatus, deleteOrder, trackOrder, getMyOrders
 } = require('../controllers/orderController');
 
-router.post('/',           protect,             createOrder);
+router.post('/',           optionalAuth,        createOrder);
 router.get('/my-orders',   protect,             getMyOrders);
 router.get('/',            protect, staffOrAdmin, getAllOrders);
 router.get('/track',                            trackOrder); // Public route

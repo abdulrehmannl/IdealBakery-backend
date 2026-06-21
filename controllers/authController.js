@@ -59,6 +59,7 @@ const setCookieAndRespond = (res, user, statusCode = 200) => {
             phone:    user.phone    || null,
             photoURL: user.photoURL || null,
             role:     user.role,
+            branch:   user.branch || null,
         },
     });
 };
@@ -88,11 +89,11 @@ const googleLogin = async (req, res, next) => {
         const { uid, email, name: displayName, picture } = decoded;
 
         // Find existing user by Firebase UID
-        let user = await User.findOne({ firebaseUid: uid });
+        let user = await User.findOne({ firebaseUid: uid }).populate('branch', 'name');
 
         if (!user) {
             // Check if they already have an account by email (link accounts)
-            user = await User.findOne({ email: email?.toLowerCase() });
+            user = await User.findOne({ email: email?.toLowerCase() }).populate('branch', 'name');
 
             if (user) {
                 // Link existing account to Google
@@ -209,7 +210,7 @@ const loginPhone = async (req, res, next) => {
 
         console.log(`[loginPhone] Received phone: "${phone}"`);
 
-        let user = await User.findOne({ phone }).select('+password');
+        let user = await User.findOne({ phone }).select('+password').populate('branch', 'name');
         console.log(`[loginPhone] User found in DB:`, user ? `Yes (ID: ${user._id})` : 'No');
 
         if (!user) {
@@ -266,7 +267,15 @@ const getMe = async (req, res, next) => {
         // req.user is set in the `protect` middleware
         res.status(200).json({
             success: true,
-            user: req.user,
+            user: {
+                id:       req.user._id,
+                name:     req.user.name,
+                email:    req.user.email    || null,
+                phone:    req.user.phone    || null,
+                photoURL: req.user.photoURL || null,
+                role:     req.user.role,
+                branch:   req.user.branch   || null,
+            },
         });
     } catch (error) {
         next(error);

@@ -58,7 +58,7 @@ const createOrder = async (req, res, next) => {
     session.startTransaction();
 
     try {
-        const { branch, totalAmount, paymentMethod, address, phone, orderType, items } = req.body;
+        const { items, totalAmount, paymentMethod, address, phone, orderType, notes, branch, customerName } = req.body;
 
         // ── Validate required fields ──
         const missing = [];
@@ -76,11 +76,17 @@ const createOrder = async (req, res, next) => {
             return res.status(400).json({ success: false, message: `Missing: ${missing.join(', ')}` });
         }
 
+        // Generate a random order number (e.g. ISB-12345678)
+        const generateOrderNumber = () => 'ISB-' + Date.now().toString().slice(-6) + Math.floor(10 + Math.random() * 90);
+        const newOrderNumber = generateOrderNumber();
+
         // ── Step 1: Create the Order header ──
         // req.user is attached by the protect middleware — logged-in user's ID
         const [order] = await Order.create([{
-            customer:      req.user._id,
-            branch:        branch || null,
+            orderNumber:   newOrderNumber,
+            customer:      req.user ? req.user._id : null,
+            customerName:  req.user ? req.user.name : customerName,
+            branch:        req.user?.branch || branch || null,
             totalAmount,
             paymentMethod,
             address,
@@ -92,10 +98,11 @@ const createOrder = async (req, res, next) => {
         // ── Step 2: Build OrderItem documents from items array ──
         // Each item gets the new order's _id attached
         const orderItemDocs = items.map(item => ({
-            order:    order._id,
-            product:  item.product,
-            quantity: item.quantity,
-            price:    item.price,
+            order:       order._id,
+            product:     item.product || undefined,
+            productName: item.productName || 'Unknown Product',
+            quantity:    item.quantity,
+            price:       item.price,
         }));
 
         // ── Step 3: Save all order items in one batch ──
@@ -155,7 +162,13 @@ const getAllOrders = async (req, res, next) => {
             .populate('branch',   'name city')
             .sort({ createdAt: -1 });
 
-        return res.status(200).json({ success: true, count: orders.length, data: orders });
+        // Fetch items for each order
+        const ordersWithItems = await Promise.all(orders.map(async (order) => {
+            const items = await OrderItem.find({ order: order._id }).populate('product', 'name price image');
+            return { ...order.toObject(), items };
+        }));
+
+        return res.status(200).json({ success: true, count: ordersWithItems.length, data: ordersWithItems });
 
     } catch (error) { next(error); }
 };
@@ -262,9 +275,16 @@ const trackOrder = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'Order ID and phone number are required.' });
         }
 
-        const order = await Order.findById(orderId)
+        let order = await Order.findOne({ orderNumber: orderId })
             .populate('customer', 'name email phone')
             .populate('branch', 'name city address');
+
+        // Fallback for older orders that might only have an ObjectId
+        if (!order && orderId.match(/^[0-9a-fA-F]{24}$/)) {
+            order = await Order.findById(orderId)
+                .populate('customer', 'name email phone')
+                .populate('branch', 'name city address');
+        }
 
         if (!order) {
             return res.status(404).json({ success: false, message: 'Order not found.' });

@@ -48,9 +48,25 @@ const getSingleAttendance = async (req, res, next) => {
     } catch (error) { next(error); }
 };
 
-// POST mark attendance for a staff member
+// POST mark attendance for a staff member (or bulk)
 const markAttendance = async (req, res, next) => {
     try {
+        if (req.body.records && Array.isArray(req.body.records)) {
+            const { date, records } = req.body;
+            const attendanceDate = date ? new Date(date) : new Date();
+            attendanceDate.setHours(0, 0, 0, 0);
+
+            const ops = records.map(r => ({
+                updateOne: {
+                    filter: { staff: r.staffId, date: attendanceDate },
+                    update: { $set: { status: r.status, arrivalTime: r.arrivalTime, leaveTime: r.leaveTime } },
+                    upsert: true
+                }
+            }));
+            await Attendance.bulkWrite(ops);
+            return res.status(200).json({ success: true, message: 'Attendance marked for all.' });
+        }
+
         const { staff, date, status, arrivalTime, leaveTime, notes } = req.body;
 
         if (!staff || !status)
