@@ -20,6 +20,7 @@
  */
 
 const CounterSales = require('../models/CounterSales');
+const Product = require('../models/Product');
 
 // GET all counter sales — Admin/Manager
 // Filters: ?branch=id  ?staff=id  ?paymentMethod=cash
@@ -89,6 +90,13 @@ const createCounterSale = async (req, res, next) => {
             branch, staff, items, customerName, totalAmount, paymentMethod, notes,
             saleDate: saleDate || Date.now(),
         });
+
+        // Deduct from Product stock
+        for (const item of items) {
+            await Product.findByIdAndUpdate(item.product, {
+                $inc: { stock: -item.quantity }
+            });
+        }
 
         const populated = await CounterSales.findById(sale._id)
             .populate('branch', 'name').populate('staff', 'name role')

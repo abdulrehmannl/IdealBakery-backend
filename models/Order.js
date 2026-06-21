@@ -11,11 +11,12 @@ const orderSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Branch'},
   totalAmount: { type: Number, required: true },
-  status: { type: String, enum: ['pending', 'confirmed', 'preparing', 'delivered', 'cancelled'], default: 'pending'},
+  status: { type: String, enum: ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled'], default: 'pending'},
   paymentMethod: { type: String, enum: ['cash', 'online'], required: true},
   address: { type: String, required: true },
   phone: { type: String, required: true},
-  orderType: { type: String, enum: ['delivery', 'pickup'], required: true }
+  orderType: { type: String, enum: ['delivery', 'pickup'], required: true },
+  assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }
 
 }, { timestamps: true });
 

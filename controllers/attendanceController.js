@@ -12,6 +12,7 @@
  */
 
 const Attendance = require('../models/Attendance');
+const User = require('../models/User');
 
 // GET all attendance records
 // Filters: ?staff=id  ?date=2026-04-09  ?status=absent  ?branch (via staff populate)
@@ -20,6 +21,13 @@ const getAllAttendance = async (req, res, next) => {
         const filter = {};
         if (req.query.staff)  filter.staff  = req.query.staff;
         if (req.query.status) filter.status = req.query.status;
+
+        // If manager, enforce branch filtering
+        if (req.user && req.user.role === 'manager') {
+            const branchStaff = await User.find({ branch: req.user.branch }).select('_id');
+            const staffIds = branchStaff.map(s => s._id);
+            filter.staff = { $in: staffIds };
+        }
 
         // Date range filter — ?dateFrom=2026-04-01&dateTo=2026-04-30
         if (req.query.dateFrom || req.query.dateTo) {
@@ -59,7 +67,7 @@ const markAttendance = async (req, res, next) => {
             const ops = records.map(r => ({
                 updateOne: {
                     filter: { staff: r.staffId, date: attendanceDate },
-                    update: { $set: { status: r.status, arrivalTime: r.arrivalTime, leaveTime: r.leaveTime } },
+                    update: { $set: { status: r.status, arrivalTime: r.arrivalTime, leaveTime: r.leaveTime, markedBy: req.user._id } },
                     upsert: true
                 }
             }));
@@ -77,7 +85,7 @@ const markAttendance = async (req, res, next) => {
         // Normalize to midnight so the unique index works correctly
         attendanceDate.setHours(0, 0, 0, 0);
 
-        const record = await Attendance.create({ staff, date: attendanceDate, status, arrivalTime, leaveTime, notes });
+        const record = await Attendance.create({ staff, date: attendanceDate, status, arrivalTime, leaveTime, notes, markedBy: req.user._id });
         const populated = await Attendance.findById(record._id).populate('staff', 'name role');
 
         return res.status(201).json({ success: true, message: 'Attendance marked.', data: populated });
@@ -102,7 +110,31 @@ const updateAttendance = async (req, res, next) => {
     } catch (error) { next(error); }
 };
 
-// DELETE attendance record
+// GET logged in user's attendance
+const getMyAttendance = async (req, res, next) => {
+    try {
+        const records = await Attendance.find({ staff: req.user._id })
+            .populate('markedBy', 'name')
+            .sort({ date: -1 });
+
+        // Calculate current month summary
+        const now = new Date();
+        const currentMonthRecords = records.filter(r => 
+            r.date.getMonth() === now.getMonth() && r.date.getFullYear() === now.getFullYear()
+        );
+        
+        const summary = {
+            present: currentMonthRecords.filter(r => r.status === 'present').length,
+            late: currentMonthRecords.filter(r => r.status === 'late').length,
+            absent: currentMonthRecords.filter(r => r.status === 'absent').length,
+            halfday: currentMonthRecords.filter(r => r.status === 'halfday').length
+        };
+
+        return res.status(200).json({ success: true, summary, data: records });
+    } catch (error) { next(error); }
+};
+
+// DELETE an attendance record
 const deleteAttendance = async (req, res, next) => {
     try {
         const record = await Attendance.findByIdAndDelete(req.params.id);
@@ -111,7 +143,7 @@ const deleteAttendance = async (req, res, next) => {
     } catch (error) { next(error); }
 };
 
-module.exports = { getAllAttendance, getSingleAttendance, markAttendance, updateAttendance, deleteAttendance };
+module.exports = { getAllAttendance, getSingleAttendance, markAttendance, updateAttendance, deleteAttendance, getMyAttendance };
 
 /*
  * END OF FILE SUMMARY

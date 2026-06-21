@@ -180,10 +180,22 @@ const staffOrAdmin = (req, res, next) => {
     next();
 };
 
+const staffAdminOrDelivery = (req, res, next) => {
+    const allowedRoles = ['admin', 'staff', 'delivery', 'manager']; // Include manager just in case, though manager usually implies admin/staff access
+
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
+        return res.status(403).json({
+            success: false,
+            message: 'Access denied. Staff, Admin or Delivery only.',
+        });
+    }
+    next();
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // EXPORTS
 // ─────────────────────────────────────────────────────────────────────────────
-module.exports = { protect, optionalAuth, adminOnly, staffOrAdmin };
+module.exports = { protect, optionalAuth, adminOnly, staffOrAdmin, staffAdminOrDelivery };
 
 /*
  * END OF FILE SUMMARY

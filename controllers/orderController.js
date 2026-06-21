@@ -151,6 +151,9 @@ const getAllOrders = async (req, res, next) => {
         // Admins/managers see ALL orders; customers see only their own
         if (req.user.role === 'customer') {
             filter.customer = req.user._id;
+        } else if (req.user.role === 'delivery') {
+            // Delivery guys only see orders assigned to them
+            filter.assignedTo = req.user._id;
         }
 
         if (req.query.status)    filter.status    = req.query.status;
@@ -160,6 +163,7 @@ const getAllOrders = async (req, res, next) => {
         const orders = await Order.find(filter)
             .populate('customer', 'name phone')
             .populate('branch',   'name city')
+            .populate('assignedTo', 'name phone')
             .sort({ createdAt: -1 });
 
         // Fetch items for each order
@@ -214,12 +218,20 @@ const getSingleOrder = async (req, res, next) => {
 const updateOrderStatus = async (req, res, next) => {
     try {
         const { status } = req.body;
-        const allowed = ['pending', 'confirmed', 'preparing', 'delivered', 'cancelled'];
+        const allowed = ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled'];
 
         if (!status || !allowed.includes(status)) {
             return res.status(400).json({
                 success: false,
                 message: `Invalid status. Must be one of: ${allowed.join(', ')}`,
+            });
+        }
+
+        // Delivery role restriction
+        if (req.user.role === 'delivery' && !['out_for_delivery', 'delivered'].includes(status)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Delivery staff can only update status to out_for_delivery or delivered.',
             });
         }
 
@@ -234,6 +246,35 @@ const updateOrderStatus = async (req, res, next) => {
         return res.status(200).json({
             success: true,
             message: `Order status updated to "${status}".`,
+            data:    order,
+        });
+
+    } catch (error) { next(error); }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONTROLLER 5: assignDelivery
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * @desc    Assign a delivery person to an order
+ * @route   PUT /api/orders/:id/assign
+ * @access  Private — Admin/Manager/Staff
+ */
+const assignDelivery = async (req, res, next) => {
+    try {
+        const { assignedTo } = req.body;
+
+        const order = await Order.findByIdAndUpdate(
+            req.params.id,
+            { assignedTo },
+            { new: true, runValidators: true }
+        ).populate('customer', 'name phone').populate('branch', 'name').populate('assignedTo', 'name phone');
+
+        if (!order) return res.status(404).json({ success: false, message: 'Order not found.' });
+
+        return res.status(200).json({
+            success: true,
+            message: `Delivery assigned successfully.`,
             data:    order,
         });
 
@@ -326,7 +367,16 @@ const getMyOrders = async (req, res, next) => {
     }
 };
 
-module.exports = { createOrder, getAllOrders, getSingleOrder, updateOrderStatus, deleteOrder, trackOrder, getMyOrders };
+module.exports = {
+    createOrder,
+    getAllOrders,
+    getSingleOrder,
+    updateOrderStatus,
+    assignDelivery,
+    deleteOrder,
+    trackOrder,
+    getMyOrders
+};
 
 /*
  * END OF FILE SUMMARY

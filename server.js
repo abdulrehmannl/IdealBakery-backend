@@ -17,6 +17,7 @@
 const express = require('express');
 // express: The web framework that handles HTTP requests and routing.
 
+const path = require('path');
 const cors = require('cors');
 // cors: "Cross-Origin Resource Sharing" — allows our React frontend (running on
 // port 5173) to communicate with this backend (running on port 5000).
@@ -138,6 +139,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 // Parses incoming requests with URL-encoded bodies (HTML form submissions).
 // extended: true allows for rich objects and arrays to be encoded.
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 6. HEALTH CHECK ROUTE

@@ -43,6 +43,10 @@ const getAllUsers = async (req, res, next) => {
             filter.branch = req.query.branch;
         }
 
+        if (req.query.role) {
+            filter.role = req.query.role;
+        }
+
         const users = await User.find(filter)
             .select('-password')          // never send hashed password to frontend
             .sort({ createdAt: -1 });
@@ -199,6 +203,12 @@ const createStaff = async (req, res, next) => {
         const salt           = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
+        // ── Determine default salary based on role ──
+        let baseSalary = 0;
+        if (role === 'manager') baseSalary = 35000;
+        else if (role === 'staff') baseSalary = 22000;
+        else if (role === 'delivery') baseSalary = 20000;
+
         // ── Create the user ──
         const user = await User.create({
             name:         name.trim(),
@@ -209,6 +219,7 @@ const createStaff = async (req, res, next) => {
             jobTitle:     jobTitle ? jobTitle.trim() : undefined,
             authProvider: 'internal', // signals: created by admin, no Firebase
             isActive:     true,
+            baseSalary:   baseSalary,
         });
 
         // Return without password, populated branch
@@ -239,7 +250,7 @@ const createStaff = async (req, res, next) => {
  */
 const updateUser = async (req, res, next) => {
     try {
-        const { name, phone, password, isActive } = req.body;
+        const { name, phone, password, isActive, role, branch, jobTitle } = req.body;
 
         // Fetch user
         const user = await User.findOne({
@@ -269,6 +280,9 @@ const updateUser = async (req, res, next) => {
         // Only update fields that were provided
         if (name     !== undefined) user.name     = name;
         if (isActive !== undefined) user.isActive = isActive;
+        if (role     !== undefined) user.role     = role;
+        if (branch   !== undefined) user.branch   = branch;
+        if (jobTitle !== undefined) user.jobTitle = jobTitle.trim();
 
         // ── Password reset: only hash if a new password was sent ──
         if (password && password.trim().length > 0) {

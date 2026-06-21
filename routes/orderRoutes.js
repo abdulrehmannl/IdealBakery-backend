@@ -15,18 +15,19 @@
 
 const express = require('express');
 const router  = express.Router();
-const { protect, optionalAuth, adminOnly, staffOrAdmin } = require('../middleware/auth');
+const { protect, optionalAuth, adminOnly, staffOrAdmin, staffAdminOrDelivery } = require('../middleware/auth');
 const {
     createOrder, getAllOrders, getSingleOrder,
-    updateOrderStatus, deleteOrder, trackOrder, getMyOrders
+    updateOrderStatus, assignDelivery, deleteOrder, trackOrder, getMyOrders
 } = require('../controllers/orderController');
 
 router.post('/',           optionalAuth,        createOrder);
 router.get('/my-orders',   protect,             getMyOrders);
-router.get('/',            protect, staffOrAdmin, getAllOrders);
+router.get('/',            protect, staffAdminOrDelivery, getAllOrders);
 router.get('/track',                            trackOrder); // Public route
 router.get('/:id',         protect,             getSingleOrder);
-router.put('/:id/status',  protect, staffOrAdmin, updateOrderStatus);
+router.put('/:id/status',  protect, staffAdminOrDelivery, updateOrderStatus);
+router.put('/:id/assign',  protect, staffOrAdmin, assignDelivery);
 router.delete('/:id',      protect, adminOnly,   deleteOrder);
 
 module.exports = router;

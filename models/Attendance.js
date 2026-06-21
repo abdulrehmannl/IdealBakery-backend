@@ -4,7 +4,7 @@ const attendanceSchema = new mongoose.Schema({
 
   staff: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Staff',
+    ref: 'User',
     required: true
   },
   //date: { type: Date, required: true },
@@ -12,7 +12,10 @@ const attendanceSchema = new mongoose.Schema({
   status: { type: String, enum: ['present', 'absent', 'late', 'halfday'], required: true },
   arrivalTime: { type: String },
   leaveTime: { type: String },
-  notes: { type: String
+  notes: { type: String },
+  markedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   }
 
 }, { timestamps: true });

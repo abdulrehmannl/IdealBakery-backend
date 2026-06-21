@@ -4,7 +4,7 @@ const salarySchema = new mongoose.Schema({
 
   staff: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Staff',
+    ref: 'User',
     required: true
   },
   month: { 

@@ -93,13 +93,25 @@ const generateReport = async (req, res, next) => {
         }
 
         if (type === 'attendance') {
-            const records = await Attendance.find({ date: { $gte: from, $lte: to } });
+            const records = await Attendance.find({ date: { $gte: from, $lte: to } }).populate('staff');
+            
+            // Group by jobTitle
+            const byJobTitle = {};
+            records.forEach(r => {
+                const title = r.staff?.jobTitle || r.staff?.role || 'Unknown';
+                if (!byJobTitle[title]) {
+                    byJobTitle[title] = { present: 0, absent: 0, late: 0, halfday: 0 };
+                }
+                byJobTitle[title][r.status] = (byJobTitle[title][r.status] || 0) + 1;
+            });
+
             reportData = {
                 totalRecords: records.length,
                 present:  records.filter(r => r.status === 'present').length,
                 absent:   records.filter(r => r.status === 'absent').length,
                 late:     records.filter(r => r.status === 'late').length,
                 halfday:  records.filter(r => r.status === 'halfday').length,
+                byJobTitle
             };
         }
 

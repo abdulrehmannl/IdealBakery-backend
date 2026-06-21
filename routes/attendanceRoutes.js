@@ -15,9 +15,10 @@
 const express = require('express');
 const router  = express.Router();
 const { protect, adminOnly, staffOrAdmin } = require('../middleware/auth');
-const { getAllAttendance, getSingleAttendance, markAttendance, updateAttendance, deleteAttendance } = require('../controllers/attendanceController');
+const { getAllAttendance, getSingleAttendance, markAttendance, updateAttendance, deleteAttendance, getMyAttendance } = require('../controllers/attendanceController');
 
 router.get('/',       protect, staffOrAdmin, getAllAttendance);
+router.get('/my-attendance', protect, getMyAttendance);
 router.get('/:id',    protect, staffOrAdmin, getSingleAttendance);
 router.post('/',      protect, staffOrAdmin, markAttendance);
 router.put('/:id',    protect, staffOrAdmin, updateAttendance);

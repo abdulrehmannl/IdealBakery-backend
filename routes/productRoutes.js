@@ -29,6 +29,7 @@ const router = express.Router();
 
 // ── Import middleware ──
 const { protect, adminOnly } = require('../middleware/auth');
+const upload = require('../middleware/upload');
 
 // ── Import controller functions ──
 const {
@@ -68,6 +69,19 @@ router.get('/:id', getSingleProduct);
  * @access  Private (Admin/Manager)
  */
 router.post('/', protect, adminOnly, createProduct);
+
+/**
+ * @route   POST /api/products/upload-image
+ * @desc    Upload product image
+ * @access  Private (Admin/Manager)
+ */
+router.post('/upload-image', protect, adminOnly, upload.single('image'), (req, res) => {
+    if (req.file) {
+        res.status(200).json({ success: true, url: req.file.path });
+    } else {
+        res.status(400).json({ success: false, message: 'Image upload failed' });
+    }
+});
 
 /**
  * @route   PUT /api/products/:id

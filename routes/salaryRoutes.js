@@ -14,12 +14,18 @@
 const express = require('express');
 const router  = express.Router();
 const { protect, adminOnly } = require('../middleware/auth');
-const { getAllSalaries, getSingleSalary, createSalary, updateSalary, deleteSalary } = require('../controllers/salaryController');
+const { getAllSalaries, getSingleSalary, createSalary, updateSalary, deleteSalary, paySalary } = require('../controllers/salaryController');
 
-router.get('/',       protect, adminOnly, getAllSalaries);
-router.get('/:id',    protect, adminOnly, getSingleSalary);
+const managerOrAdmin = (req, res, next) => {
+    if (req.user && ['admin', 'manager'].includes(req.user.role)) return next();
+    return res.status(403).json({ success: false, message: 'Access denied. Managers/Admins only.' });
+};
+
+router.get('/',       protect, managerOrAdmin, getAllSalaries);
+router.get('/:id',    protect, managerOrAdmin, getSingleSalary);
 router.post('/',      protect, adminOnly, createSalary);
 router.put('/:id',    protect, adminOnly, updateSalary);
+router.put('/:id/pay', protect, adminOnly, paySalary);
 router.delete('/:id', protect, adminOnly, deleteSalary);
 
 module.exports = router;

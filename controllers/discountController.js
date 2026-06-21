@@ -101,7 +101,31 @@ const deleteDiscount = async (req, res, next) => {
     } catch (error) { next(error); }
 };
 
-module.exports = { getAllDiscounts, getSingleDiscount, createDiscount, updateDiscount, deleteDiscount };
+// POST validate discount
+const validateDiscount = async (req, res, next) => {
+    try {
+        const { code } = req.body;
+        if (!code) {
+            return res.status(400).json({ success: false, message: 'Discount code is required.' });
+        }
+
+        // We assume code is matched with title (case-insensitive)
+        const discount = await Discount.findOne({ title: { $regex: new RegExp(`^${code}$`, 'i') }, isActive: true });
+        
+        if (!discount) {
+            return res.status(404).json({ success: false, message: 'Invalid or expired discount code.' });
+        }
+
+        const now = new Date();
+        if (now < new Date(discount.startDate) || now > new Date(discount.endDate)) {
+            return res.status(400).json({ success: false, message: 'Discount code is not active at this time.' });
+        }
+
+        return res.status(200).json({ success: true, data: discount });
+    } catch (error) { next(error); }
+};
+
+module.exports = { getAllDiscounts, getSingleDiscount, createDiscount, updateDiscount, deleteDiscount, validateDiscount };
 
 /*
  * END OF FILE SUMMARY

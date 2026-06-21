@@ -17,6 +17,9 @@
  */
 
 const Salary = require('../models/Salary');
+const User = require('../models/User');
+
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 // GET all salary records — Admin/Manager
 // Filters: ?staff=id  ?month=Jan  ?year=2026  ?status=pending
@@ -24,13 +27,45 @@ const getAllSalaries = async (req, res, next) => {
     try {
         const filter = {};
         if (req.query.staff)  filter.staff  = req.query.staff;
-        if (req.query.month)  filter.month  = req.query.month;
         if (req.query.year)   filter.year   = Number(req.query.year);
         if (req.query.status) filter.status = req.query.status;
+        
+        let monthName = req.query.month;
+        if (req.query.month && !isNaN(req.query.month)) {
+            // Convert 1-indexed number to string (e.g. 4 -> 'Apr')
+            const mIndex = Number(req.query.month) - 1;
+            if (mIndex >= 0 && mIndex < 12) monthName = MONTH_NAMES[mIndex];
+        }
+        if (monthName) filter.month = monthName;
 
-        const salaries = await Salary.find(filter)
-            .populate({ path: 'staff', select: 'name role', populate: { path: 'branch', select: 'name' } })
+        // Auto-generate missing salaries for the requested month/year
+        if (monthName && req.query.year) {
+            const userFilter = { role: { $in: ['manager', 'staff', 'delivery'] }, isActive: true };
+            if (req.user.role === 'manager') userFilter.branch = req.user.branch;
+            
+            const users = await User.find(userFilter);
+            for (const u of users) {
+                const exists = await Salary.findOne({ staff: u._id, month: monthName, year: Number(req.query.year) });
+                if (!exists) {
+                    await Salary.create({
+                        staff: u._id,
+                        month: monthName,
+                        year: Number(req.query.year),
+                        basicSalary: u.baseSalary || 20000,
+                        netSalary: u.baseSalary || 20000
+                    });
+                }
+            }
+        }
+
+        let salaries = await Salary.find(filter)
+            .populate({ path: 'staff', select: 'name role jobTitle branch', populate: { path: 'branch', select: 'name' } })
             .sort({ year: -1, month: -1 });
+
+        // Filter out staff not in manager's branch
+        if (req.user.role === 'manager') {
+            salaries = salaries.filter(s => s.staff && s.staff.branch && s.staff.branch._id.toString() === req.user.branch.toString());
+        }
 
         return res.status(200).json({ success: true, count: salaries.length, data: salaries });
     } catch (error) { next(error); }
@@ -107,7 +142,18 @@ const updateSalary = async (req, res, next) => {
         return res.status(200).json({ success: true, message: 'Salary record updated.', data: salary });
     } catch (error) { next(error); }
 };
+// PUT mark salary as paid
+const paySalary = async (req, res, next) => {
+    try {
+        const salary = await Salary.findByIdAndUpdate(req.params.id, {
+            status: 'Paid',
+            paymentDate: Date.now()
+        }, { new: true, runValidators: true }).populate('staff', 'name role');
 
+        if (!salary) return res.status(404).json({ success: false, message: 'Salary record not found.' });
+        return res.status(200).json({ success: true, message: 'Salary marked as paid.', data: salary });
+    } catch (error) { next(error); }
+};
 // DELETE salary record
 const deleteSalary = async (req, res, next) => {
     try {
@@ -117,7 +163,7 @@ const deleteSalary = async (req, res, next) => {
     } catch (error) { next(error); }
 };
 
-module.exports = { getAllSalaries, getSingleSalary, createSalary, updateSalary, deleteSalary };
+module.exports = { getAllSalaries, getSingleSalary, createSalary, updateSalary, deleteSalary, paySalary };
 
 /*
  * END OF FILE SUMMARY
