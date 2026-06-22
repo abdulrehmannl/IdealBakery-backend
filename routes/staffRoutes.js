@@ -13,11 +13,11 @@
 
 const express = require('express');
 const router  = express.Router();
-const { protect, adminOnly } = require('../middleware/auth');
+const { protect, adminOnly, staffAdminOrDelivery } = require('../middleware/auth');
 const { getAllStaff, getSingleStaff, createStaff, updateStaff, deleteStaff } = require('../controllers/staffController');
 
-router.get('/',      protect, adminOnly, getAllStaff);
-router.get('/:id',   protect, adminOnly, getSingleStaff);
+router.get('/',      protect, staffAdminOrDelivery, getAllStaff);
+router.get('/:id',   protect, staffAdminOrDelivery, getSingleStaff);
 router.post('/',     protect, adminOnly, createStaff);
 router.put('/:id',   protect, adminOnly, updateStaff);
 router.delete('/:id',protect, adminOnly, deleteStaff);

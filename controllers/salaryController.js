@@ -146,7 +146,7 @@ const updateSalary = async (req, res, next) => {
 const paySalary = async (req, res, next) => {
     try {
         const salary = await Salary.findByIdAndUpdate(req.params.id, {
-            status: 'Paid',
+            status: 'paid',
             paymentDate: Date.now()
         }, { new: true, runValidators: true }).populate('staff', 'name role');
 

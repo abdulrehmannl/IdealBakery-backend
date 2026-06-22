@@ -8,6 +8,7 @@ const branchSchema = new mongoose.Schema({
   managerName: { type: String },
   openingHours: { type: String, default: '9:00 AM - 11:00 PM' },
   image: { type: String },
+  googleMapsLink: { type: String },
   isActive: { type: Boolean, default: true }
 }, { timestamps: true });
 

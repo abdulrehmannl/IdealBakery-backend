@@ -171,7 +171,7 @@ const createUser = async (req, res, next) => {
  */
 const createStaff = async (req, res, next) => {
     try {
-        const { name, phone, password, role, branch, jobTitle } = req.body;
+        const { name, phone, password, role, branch, jobTitle, baseSalary } = req.body;
 
         // ── Validation ──
         if (!name || !phone || !password || !role || !branch) {
@@ -204,10 +204,14 @@ const createStaff = async (req, res, next) => {
         const hashedPassword = await bcrypt.hash(password, salt);
 
         // ── Determine default salary based on role ──
-        let baseSalary = 0;
-        if (role === 'manager') baseSalary = 35000;
-        else if (role === 'staff') baseSalary = 22000;
-        else if (role === 'delivery') baseSalary = 20000;
+        let finalSalary = 0;
+        if (baseSalary !== undefined && baseSalary !== null && baseSalary !== '') {
+            finalSalary = Number(baseSalary);
+        } else {
+            if (role === 'manager') finalSalary = 35000;
+            else if (role === 'staff') finalSalary = 22000;
+            else if (role === 'delivery') finalSalary = 20000;
+        }
 
         // ── Create the user ──
         const user = await User.create({
@@ -219,7 +223,7 @@ const createStaff = async (req, res, next) => {
             jobTitle:     jobTitle ? jobTitle.trim() : undefined,
             authProvider: 'internal', // signals: created by admin, no Firebase
             isActive:     true,
-            baseSalary:   baseSalary,
+            baseSalary:   finalSalary,
         });
 
         // Return without password, populated branch
@@ -250,7 +254,7 @@ const createStaff = async (req, res, next) => {
  */
 const updateUser = async (req, res, next) => {
     try {
-        const { name, phone, password, isActive, role, branch, jobTitle } = req.body;
+        const { name, phone, password, isActive, role, branch, jobTitle, baseSalary } = req.body;
 
         // Fetch user
         const user = await User.findOne({
@@ -278,11 +282,12 @@ const updateUser = async (req, res, next) => {
         }
 
         // Only update fields that were provided
-        if (name     !== undefined) user.name     = name;
-        if (isActive !== undefined) user.isActive = isActive;
-        if (role     !== undefined) user.role     = role;
-        if (branch   !== undefined) user.branch   = branch;
-        if (jobTitle !== undefined) user.jobTitle = jobTitle.trim();
+        if (name       !== undefined) user.name       = name;
+        if (isActive   !== undefined) user.isActive   = isActive;
+        if (role       !== undefined) user.role       = role;
+        if (branch     !== undefined) user.branch     = branch;
+        if (jobTitle   !== undefined) user.jobTitle   = jobTitle.trim();
+        if (baseSalary !== undefined) user.baseSalary = baseSalary;
 
         // ── Password reset: only hash if a new password was sent ──
         if (password && password.trim().length > 0) {

@@ -14,12 +14,12 @@
 
 const express = require('express');
 const router  = express.Router();
-const { protect, adminOnly, staffOrAdmin } = require('../middleware/auth');
+const { protect, adminOnly, staffAdminOrDelivery } = require('../middleware/auth');
 const { getAllLeaves, getSingleLeave, createLeave, updateLeaveStatus, deleteLeave } = require('../controllers/leaveController');
 
-router.get('/',       protect, staffOrAdmin, getAllLeaves);
-router.get('/:id',    protect, staffOrAdmin, getSingleLeave);
-router.post('/',      protect, staffOrAdmin, createLeave);
+router.get('/',       protect, staffAdminOrDelivery, getAllLeaves);
+router.get('/:id',    protect, staffAdminOrDelivery, getSingleLeave);
+router.post('/',      protect, staffAdminOrDelivery, createLeave);
 router.put('/:id',    protect, adminOnly,    updateLeaveStatus);
 router.delete('/:id', protect, adminOnly,    deleteLeave);
 

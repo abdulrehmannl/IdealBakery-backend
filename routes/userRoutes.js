@@ -17,7 +17,7 @@
 
 const express = require('express');
 const router  = express.Router();
-const { protect, adminOnly, staffOrAdmin } = require('../middleware/auth');
+const { protect, adminOnly, staffOrAdmin, staffAdminOrDelivery } = require('../middleware/auth');
 const {
     getAllUsers,
     getSingleUser,
@@ -30,7 +30,7 @@ const {
 
 // All routes are admin-only, except GET / which staff can also use (for assigning delivery)
 router.post('/create-staff',           protect, adminOnly, createStaff);
-router.get('/',                        protect, staffOrAdmin, getAllUsers);
+router.get('/',                        protect, staffAdminOrDelivery, getAllUsers);
 router.get('/:id',                     protect, adminOnly, getSingleUser);
 router.post('/',                       protect, adminOnly, createUser);
 router.put('/:id',                     protect, adminOnly, updateUser);

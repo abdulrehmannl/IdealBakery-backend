@@ -29,7 +29,6 @@ const getAllExpenses = async (req, res, next) => {
 
         const expenses = await Expense.find(filter)
             .populate('branch',  'name city')
-            .populate('paidBy',  'name role')
             .sort({ date: -1 });
 
         // Calculate total for the filtered result
@@ -43,7 +42,7 @@ const getAllExpenses = async (req, res, next) => {
 const getSingleExpense = async (req, res, next) => {
     try {
         const expense = await Expense.findById(req.params.id)
-            .populate('branch', 'name city').populate('paidBy', 'name role');
+            .populate('branch', 'name city');
         if (!expense)
             return res.status(404).json({ success: false, message: 'Expense not found.' });
         return res.status(200).json({ success: true, data: expense });
@@ -65,7 +64,7 @@ const createExpense = async (req, res, next) => {
             return res.status(400).json({ success: false, message: `Missing: ${missing.join(', ')}` });
 
         const expense = await Expense.create({ branch, title: title.trim(), amount, category, date: date || Date.now(), paidBy, notes });
-        const populated = await Expense.findById(expense._id).populate('branch', 'name').populate('paidBy', 'name role');
+        const populated = await Expense.findById(expense._id).populate('branch', 'name');
         return res.status(201).json({ success: true, message: 'Expense recorded.', data: populated });
     } catch (error) { next(error); }
 };
@@ -84,7 +83,7 @@ const updateExpense = async (req, res, next) => {
         if (paidBy   !== undefined) updateData.paidBy   = paidBy;
 
         const expense = await Expense.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true })
-            .populate('branch', 'name').populate('paidBy', 'name role');
+            .populate('branch', 'name');
         if (!expense)
             return res.status(404).json({ success: false, message: 'Expense not found.' });
         return res.status(200).json({ success: true, message: 'Expense updated.', data: expense });

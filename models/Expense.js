@@ -10,7 +10,7 @@ const expenseSchema = new mongoose.Schema({
   category: {  type: String, 
     enum: ['rent', 'electricity', 'packaging', 'salary', 'other'], required: true },
   date: { type: Date, default: Date.now },
-  paidBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff',  required: true },
+  paidBy: { type: String, required: true },
   notes: { type: String }
 
 }, { timestamps: true });
